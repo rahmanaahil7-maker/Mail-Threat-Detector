@@ -60,12 +60,12 @@ def generate_forensic_pdf(data, output_path):
     # =========================================================================
     elements.append(Paragraph("/// MODULE 1 & 2: EMAIL ACQUISITION & PARSING", heading_style))
     m1_data = [
-        [Paragraph("OPERATOR ID:", normal_mono), Paragraph("ATIK_007", bold_mono), 
+        [Paragraph("OPERATOR ID:", normal_mono), Paragraph("ATIK KHAN, ABHISHEK KARMAKAR, KHALIQ UR REHMAN KHAN", bold_mono), 
          Paragraph("ACQUISITION NODE:", normal_mono), Paragraph(meta.get('processing_node', 'CYBERCOP_NODE_01'), bold_mono)],
         [Paragraph("UTC TIMESTAMP:", normal_mono), Paragraph(meta.get('analysis_timestamp_utc', 'N/A')[:19].replace('T', ' '), bold_mono),
          Paragraph("PARSING STATUS:", normal_mono), Paragraph("<font color='#10b981'>SUCCESS (RFC822)</font>", bold_mono)]
     ]
-    t_m1 = Table(m1_data, colWidths=[120, 150, 120, 150])
+    t_m1 = Table(m1_data, colWidths=[110, 160, 110, 160])
     t_m1.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), color_card),
         ('GRID', (0, 0), (-1, -1), 0.5, color_border),
@@ -90,7 +90,7 @@ def generate_forensic_pdf(data, output_path):
         ('GRID', (0, 0), (-1, -1), 0.5, color_border),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('PADDING', (0, 0), (-1, -1), 6),
-        ('TEXTCOLOR', (0, 1), (-1, 1), colors.HexColor('#ef4444')) # Default red for unverified
+        ('TEXTCOLOR', (0, 1), (-1, 1), colors.HexColor('#ef4444'))
     ]))
     elements.append(t_m3)
 
@@ -144,17 +144,21 @@ def generate_forensic_pdf(data, output_path):
         elements.append(Paragraph("No executable attachments found for Threat Intel Sandbox detonation.", normal_mono))
 
     # =========================================================================
-    # MODULE 7 & 8: AI/ML DETECTION & RISK SCORING
+    # MODULE 7 & 8: AI/ML DETECTION & RISK SCORING (FIXED SIZING)
     # =========================================================================
     elements.append(Paragraph("/// MODULE 7 & 8: AI/ML DETECTION & RISK SCORING", heading_style))
     severity = risk.get('severity', 'UNKNOWN').upper()
     sev_color = colors.HexColor('#ef4444') if severity in ['HIGH', 'CRITICAL'] else (colors.HexColor('#f59e0b') if severity == 'MEDIUM' else colors.HexColor('#10b981'))
     sev_styled = Paragraph(f"<font color='{sev_color.hexval()}'><b>{severity}</b></font>", bold_mono)
 
+    # Fixed font sizes and padding to prevent oversized text overflow
+    ai_val_style = ParagraphStyle('AIVal', fontName='Helvetica-Bold', fontSize=14, leading=16, textColor=colors.white, alignment=TA_CENTER)
+    score_val_style = ParagraphStyle('ScoreVal', fontName='Helvetica-Bold', fontSize=14, leading=16, textColor=colors.white, alignment=TA_CENTER)
+
     m7_data = [
         [Paragraph("MODULE 7: AI PHISHING CONFIDENCE", normal_mono), Paragraph("MODULE 8: FINAL HEURISTIC SCORE", normal_mono)],
-        [Paragraph(str(ai.get('percentage', 'N/A')), ParagraphStyle('L', fontName='Helvetica-Bold', fontSize=18, textColor=colors.white, alignment=TA_CENTER)), 
-         Paragraph(str(risk.get('score', 0)), ParagraphStyle('L', fontName='Helvetica-Bold', fontSize=18, textColor=colors.white, alignment=TA_CENTER))],
+        [Paragraph(str(ai.get('percentage', 'N/A')), ai_val_style), 
+         Paragraph(str(risk.get('score', 0)), score_val_style)],
         [Paragraph("Deep Neural Net (64x32 MLP)", normal_mono), sev_styled]
     ]
     t_m7 = Table(m7_data, colWidths=[270, 270])
@@ -163,7 +167,7 @@ def generate_forensic_pdf(data, output_path):
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('GRID', (0, 0), (-1, -1), 0.5, color_border),
-        ('PADDING', (0, 0), (-1, -1), 8),
+        ('PADDING', (0, 0), (-1, -1), 6),
     ]))
     elements.append(t_m7)
 
@@ -186,11 +190,14 @@ def generate_forensic_pdf(data, output_path):
     ]))
     elements.append(t_m9)
     
-    # FOOTER
-    elements.append(Spacer(1, 20))
+    # FOOTER (Line by Line Team Stack)
+    elements.append(Spacer(1, 15))
     elements.append(HRFlowable(width="100%", color=color_border, thickness=1, spaceBefore=0, spaceAfter=5))
-    elements.append(Paragraph("DEVELOPED & ENGINEERED BY: ATIK_007", ParagraphStyle('Footer', fontName='Courier', fontSize=7, leading=9, textColor=colors.HexColor('#94a3b8'), alignment=TA_CENTER)))
-    elements.append(Paragraph("☣ POWERED BY UMBRELLA CORPORATION ☣", ParagraphStyle('Footer2', fontName='Courier-Bold', fontSize=7, leading=9, textColor=colors.HexColor('#ef4444'), alignment=TA_CENTER)))
+    elements.append(Paragraph("DEVELOPED & ENGINEERED BY:", ParagraphStyle('FTitle', fontName='Courier-Bold', fontSize=7, leading=9, textColor=colors.HexColor('#94a3b8'), alignment=TA_CENTER)))
+    elements.append(Paragraph("ATIK KHAN", ParagraphStyle('F1', fontName='Courier-Bold', fontSize=7, leading=9, textColor=colors.white, alignment=TA_CENTER)))
+    elements.append(Paragraph("ABHISHEK KARMAKAR", ParagraphStyle('F2', fontName='Courier-Bold', fontSize=7, leading=9, textColor=colors.white, alignment=TA_CENTER)))
+    elements.append(Paragraph("KHALIQ UR REHMAN KHAN", ParagraphStyle('F3', fontName='Courier-Bold', fontSize=7, leading=9, textColor=colors.white, alignment=TA_CENTER)))
+    elements.append(Paragraph("☣ POWERED BY UMBRELLA CORPORATION ☣", ParagraphStyle('Footer2', fontName='Courier-Bold', fontSize=7, leading=9, textColor=colors.HexColor('#ef4444'), alignment=TA_CENTER, spaceBefore=4)))
 
     # Build PDF with the dark background canvas callback applied to all pages
     doc.build(elements, onFirstPage=draw_dark_bg, onLaterPages=draw_dark_bg)

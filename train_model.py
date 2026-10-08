@@ -1,53 +1,88 @@
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline
+import numpy as np
+import re
 import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.utils.class_weight import compute_class_weight
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, BatchNormalization
+from keras.callbacks import EarlyStopping
 
-def train_and_save_model():
-    # Expanded dataset with much clearer distinctions between Safe and Phishing
-    data = {
-        "text": [
-            # Clean / Safe Emails (Label 0)
-            "Project Update: The new server is up and running. Access the dashboard here.",
-            "Meeting at 3 PM: Please bring the quarterly reports to the conference room.",
-            "Lunch today? Let me know if you want to grab sandwiches at noon.",
-            "Following up on our conversation yesterday regarding the Q3 marketing budget.",
-            "Here are the meeting notes from this morning's sync. Let me know if I missed anything.",
-            "Approved: Your PTO request for next Friday has been approved.",
-            "Happy birthday! Wishing you a great day from the whole team.",
-            "Can you review the attached draft before we send it to the client?",
-            "Weekly Newsletter: Top 10 industry trends to watch this month.",
-            "Just checking in to see if you need any help with the onboarding process.",
-            
-            # Phishing / Malicious Emails (Label 1)
-            "URGENT: Your account has been suspended. Click here to verify your password immediately!",
-            "Invoice Overdue: Please open the attached document to pay your outstanding balance.",
-            "Security Alert: Unauthorized login attempt detected. Secure your account now via this link.",
-            "Action Required: Update your billing credentials immediately to prevent service interruption.",
-            "Final Warning: Your mailbox is full. Click here to upgrade your quota or lose access.",
-            "Verify your bank account immediately. Unusual activity detected.",
-            "You have a secure document waiting. Sign in with your email password to view it.",
-            "Your package could not be delivered. Click the tracking link to reschedule and pay the fee.",
-            "IT Helpdesk: We are migrating servers. Enter your credentials in the portal to migrate your data.",
-            "Winner! You have been selected for a $500 gift card. Claim your prize now."
-        ],
-        "label": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    }
+# 1. Advanced Text Preprocessing tailored for Emails
+def clean_email_text(text):
+    text = str(text).lower()
+    text = re.sub(r'<[^>]+>', ' ', text)  # Strip out HTML tags completely
+    text = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', ' httpaddr ', text) # Normalize URLs
+    text = re.sub(r'\S+@\S+', ' emailaddr ', text) # Normalize email addresses
+    text = re.sub(r'\d+', ' number ', text) # Normalize numbers
+    text = re.sub(r'[^a-z\s]', ' ', text) # Remove all punctuation and special characters
+    text = ' '.join(text.split()) # Remove extra whitespace
+    return text
+
+def train_highly_accurate_dnn():
+    print("Loading dataset...")
+    # Replace with your actual dataset path
+    # Ensure it has columns 'text' (the email content) and 'label' (0 for safe, 1 for phishing)
+    df = pd.read_csv('your_email_dataset.csv')
     
-    df = pd.DataFrame(data)
+    print("Cleaning text data...")
+    df['clean_text'] = df['text'].apply(clean_email_text)
     
-    # C=10 reduces regularization, forcing the model to make more extreme/confident predictions (closer to 0% or 100%)
-    model_pipeline = make_pipeline(
-        TfidfVectorizer(stop_words='english', ngram_range=(1, 2)),
-        LogisticRegression(C=10, class_weight='balanced')
+    # 2. Contextual Vectorization (Using N-grams)
+    # ngram_range=(1,2) captures phrases like "account suspended" or "click here" 
+    # instead of just individual words "account" and "suspended"
+    print("Vectorizing data...")
+    vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2), stop_words='english')
+    X = vectorizer.fit_transform(df['clean_text']).toarray()
+    y = df['label'].values
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    
+    # 3. Handle Class Imbalance
+    # If you have 10,000 safe emails but only 1,000 phishing ones, the AI ignores phishing.
+    # This forces the AI to pay equal attention to the minority class.
+    class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
+    class_weight_dict = dict(enumerate(class_weights))
+    
+    # 4. Optimized Model Architecture
+    print("Building DNN Architecture...")
+    model = Sequential()
+    
+    # Input layer + first hidden layer
+    model.add(Dense(256, input_shape=(X_train.shape[1],), activation='relu'))
+    model.add(BatchNormalization()) # Stabilizes learning
+    model.add(Dropout(0.4)) # Randomly drops 40% of neurons to prevent memorization (overfitting)
+    
+    # Second hidden layer
+    model.add(Dense(128, activation='relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.3))
+    
+    # Output layer (Sigmoid for binary classification: 0 to 1 probability)
+    model.add(Dense(1, activation='sigmoid'))
+    
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    
+    # 5. Early Stopping
+    # Stops training the moment the AI stops improving, preventing it from over-learning the training data
+    early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+    
+    print("Training Model...")
+    history = model.fit(
+        X_train, y_train,
+        validation_data=(X_test, y_test),
+        epochs=20,
+        batch_size=32,
+        class_weight=class_weight_dict,
+        callbacks=[early_stop]
     )
     
-    print("Training the upgraded AI model...")
-    model_pipeline.fit(df['text'], df['label'])
-    
-    joblib.dump(model_pipeline, 'phishing_model.pkl')
-    print("Model successfully saved as 'phishing_model.pkl'")
+    print("Saving highly accurate model and vectorizer...")
+    # Use Keras save format for the model, joblib for the vectorizer
+    model.save('dnn_model.keras')
+    joblib.dump(vectorizer, 'dnn_vectorizer.pkl')
+    print("Complete!")
 
 if __name__ == "__main__":
-    train_and_save_model()
+    train_highly_accurate_dnn()

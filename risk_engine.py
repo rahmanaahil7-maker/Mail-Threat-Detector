@@ -44,13 +44,14 @@ def calculate_risk(parsed_data, urls=None, sandbox_data=None, ai_data=None):
             matched_rules.append(f"Sandbox isolated threat in attachment: {item.get('filename', 'payload')} (+40)")
 
     # 4. Deep Neural Network (DNN) AI Confidence Integration
+    print("--- DEBUG AI DATA ---", ai_data)
     if ai_data and not ai_data.get('error'):
         try:
             # Clean percentage string (e.g. "78.5%" -> 78.5)
             pct_str = str(ai_data.get('percentage', '0')).replace('%', '').strip()
             ai_confidence = float(pct_str)
             
-            if ai_confidence > 50.0:
+            if ai_confidence > 10.0:
                 ai_weight = int(ai_confidence * 0.35) # Scaled contribution
                 score += ai_weight
                 matched_rules.append(f"DNN Phishing Confidence flagged at {ai_confidence}% (+{ai_weight})")

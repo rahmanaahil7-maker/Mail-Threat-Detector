@@ -121,7 +121,7 @@ def process_email_file(filepath, filename):
         ip_intel[ip] = check_ip_reputation(ip)
         time.sleep(0.3)
     
-    risk_data = calculate_risk(parsed_data=parsed_data, ai_data=analysis_data, urls=url_data)
+    risk_data = calculate_risk(parsed_data=parsed_data, ai_data=ai_prediction, urls=url_data)
     sandbox_data = [detonate_attachment(filepath, "payload.bin")]
     
     # Enhanced Report Features

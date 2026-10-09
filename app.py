@@ -25,7 +25,7 @@ from analyzer import analyze_headers
 from ip_analyzer import analyze_and_store_ips
 from threat_intel import check_ip_reputation, check_url_reputation
 from ai_analyzer import analyze_email_content
-from risk_engine import calculate_risk_score
+from risk_engine import calculate_risk
 from report_generator import generate_forensic_pdf
 from sandbox_analyzer import detonate_attachment
 from siem_integration import forward_to_siem
@@ -121,7 +121,7 @@ def process_email_file(filepath, filename):
         ip_intel[ip] = check_ip_reputation(ip)
         time.sleep(0.3)
     
-    risk_data = calculate_risk_score(parsed_data, analysis_data, url_data, ip_intel)
+    risk_data = calculate_risk(parsed_data=parsed_data, ai_data=analysis_data, urls=url_data)
     sandbox_data = [detonate_attachment(filepath, "payload.bin")]
     
     # Enhanced Report Features

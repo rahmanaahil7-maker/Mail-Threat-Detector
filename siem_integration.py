@@ -14,7 +14,7 @@ def forward_to_siem(threat_data, filename, severity):
         "event_type": "THREAT_INGESTION",
         "file_analyzed": filename,
         "severity": severity,
-        "risk_score": threat_data.get('score', 0),
+        "risk": threat_data.get('score', 0),
         "iocs": {
             "urls": threat_data.get('urls', []),
             "ips": threat_data.get('ips', [])

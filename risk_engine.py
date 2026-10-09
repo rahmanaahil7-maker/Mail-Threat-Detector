@@ -1,86 +1,79 @@
-def calculate_risk_score(parsed_data, analysis_data, url_data, ip_intel):
+def calculate_risk(parsed_data, urls=None, sandbox_data=None, ai_data=None):
+    """
+    Evaluates multi-vector telemetry (headers, URLs, sandboxing, and AI confidence)
+    to compute a dynamic risk score, severity rating, and matched heuristic rules.
+    """
     score = 0
     matched_rules = []
-    
-    # 1. Email Authentication Failures (Balanced)
-    # Explicit failures are highly suspicious (+15)
-    # Missing headers get a minor penalty (+5) since many safe emails lack full corporate signatures
-    for auth_type in ['spf', 'dkim', 'dmarc']:
-        val = analysis_data.get(auth_type, '').lower().strip()
-        
-        if val in ['fail', 'softfail', 'error']:
-            score += 15
-            matched_rules.append(f"{auth_type.upper()} explicit failure (+15)")
-        elif val in ['none', 'not found', 'missing', '']:
-            score += 5
-            matched_rules.append(f"{auth_type.upper()} record missing or none (+5)")
-            
-    # 2. Reply-To Mismatch
-    headers = parsed_data.get('headers', {})
-    from_addr = headers.get('From', '')
-    reply_to = headers.get('Reply-To', '')
-    if reply_to and from_addr.strip().lower() != reply_to.strip().lower():
-        score += 10
-        matched_rules.append("Reply-To mismatch: Replies go to a different address than sender (+10)")
-        
-    # 3. Threat Intelligence (URLs & IPs)
-    has_suspicious = False
-    has_malicious = False
-    
-    for u in url_data:
-        rep = u.get('reputation', {})
-        if isinstance(rep, dict):
-            if rep.get('malicious', 0) > 0:
-                has_malicious = True
-            elif rep.get('suspicious', 0) > 0:
-                has_suspicious = True
-            
-    for ip, rep in ip_intel.items():
-        if isinstance(rep, dict):
-            if rep.get('malicious', 0) > 0:
-                has_malicious = True
-            elif rep.get('suspicious', 0) > 0:
-                has_suspicious = True
-            
-    if has_malicious:
-        score += 25
-        matched_rules.append("Malicious IOC detected in URLs or IPs (+25)")
-    if has_suspicious:
-        score += 15
-        matched_rules.append("Suspicious URL/IP detected (+15)")
-        
-    # 4. Content Language Analysis
-    body = parsed_data.get('body', '').lower()
-    
-    urgency_keywords = ['urgent', 'immediately', 'act now', 'action required', 'overdue', 'suspended']
-    if any(keyword in body for keyword in urgency_keywords):
-        score += 10
-        matched_rules.append("Urgency language detected (+10)")
-        
-    credential_keywords = ['password', 'login', 'verify', 'credentials', 'account', 'secure']
-    if any(keyword in body for keyword in credential_keywords):
-        score += 10
-        matched_rules.append("Credential language detected (+10)")
-        
-    # 5. Attachment Checks
-    attachments = parsed_data.get('attachments', [])
-    if attachments:
+
+    # Ensure parameters are valid lists/dicts
+    urls = urls or []
+    sandbox_data = sandbox_data or []
+    ai_data = ai_data or {}
+    parsed_data = parsed_data or {}
+
+    # 1. Header & Authentication Analysis (SPF, DKIM, DMARC)
+    spf = parsed_data.get('spf_status', '').upper()
+    dkim = parsed_data.get('dkim_status', '').upper()
+    dmarc = parsed_data.get('dmarc_status', '').upper()
+
+    if 'PASS' not in spf:
         score += 5
-        matched_rules.append(f"Contains file attachments ({len(attachments)}) (+5)")
-        
-    # 6. Calculate Final Severity (Balanced Thresholds)
-    if score >= 70:
-        severity = "Critical 🔴"
-    elif score >= 45:
-        severity = "High 🟠"
-    elif score >= 20:
-        severity = "Medium 🟡"
+        matched_rules.append("SPF record missing or failed (+5)")
+    if 'PASS' not in dkim:
+        score += 5
+        matched_rules.append("DKIM signature unverified or missing (+5)")
+    if 'PASS' not in dmarc:
+        score += 5
+        matched_rules.append("DMARC policy missing or failed (+5)")
+
+    # 2. URL Threat Intelligence Check
+    for u in urls:
+        rep = u.get('reputation', {})
+        status = rep.get('status', '').upper()
+        if 'MALICIOUS' in status or 'PHISHING' in status or 'SUSPICIOUS' in status:
+            score += 25
+            matched_rules.append(f"Malicious IOC Domain detected: {u.get('domain', 'Unknown')} (+25)")
+
+    # 3. Sandbox Detonation Check
+    for item in sandbox_data:
+        report = item.get('sandbox_report', {})
+        verdict = report.get('verdict', '').upper()
+        if 'MALICIOUS' in verdict or 'THREAT' in verdict or 'SUSPICIOUS' in verdict:
+            score += 40
+            matched_rules.append(f"Sandbox isolated threat in attachment: {item.get('filename', 'payload')} (+40)")
+
+    # 4. Deep Neural Network (DNN) AI Confidence Integration
+    if ai_data and not ai_data.get('error'):
+        try:
+            # Clean percentage string (e.g. "78.5%" -> 78.5)
+            pct_str = str(ai_data.get('percentage', '0')).replace('%', '').strip()
+            ai_confidence = float(pct_str)
+            
+            if ai_confidence > 50.0:
+                ai_weight = int(ai_confidence * 0.35) # Scaled contribution
+                score += ai_weight
+                matched_rules.append(f"DNN Phishing Confidence flagged at {ai_confidence}% (+{ai_weight})")
+        except (ValueError, TypeError):
+            pass
+
+    # Cap maximum score at 100
+    score = min(score, 100)
+
+    # 5. Dynamic Severity Assignment
+    if score >= 50:
+        severity = "HIGH"
+    elif score >= 25:
+        severity = "MEDIUM"
     else:
-        severity = "Low 🟢"
-        
+        severity = "LOW"
+
+    # Fallback if no signatures triggered
+    if not matched_rules:
+        matched_rules.append("No malicious heuristic signatures triggered.")
+
     return {
         "score": score,
         "severity": severity,
-        "matched_rules": matched_rules,
-        "disclaimer": "Note: This is a heuristic score based on predefined static rules. It is for analysis purposes and does not represent an absolute guarantee of compromise."
+        "matched_rules": matched_rules
     }

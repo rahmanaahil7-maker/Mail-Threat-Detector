@@ -13,6 +13,8 @@ import quopri
 from flask import Flask, render_template, request, redirect, send_file, session, url_for
 from werkzeug.utils import secure_filename
 from flask_session import Session
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask import Flask
 
 # Google API Imports
 from google.oauth2.credentials import Credentials
@@ -31,6 +33,7 @@ from siem_integration import forward_to_siem
 from blockchain_evidence import store_blockchain_evidence
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.secret_key = "cyber_soc_secret_key_atik007" 
 app.config["SESSION_PERMANENT"] = False

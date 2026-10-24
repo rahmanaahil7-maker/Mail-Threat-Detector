@@ -27,7 +27,6 @@ from threat_intel import check_ip_reputation, check_url_reputation
 from ai_analyzer import analyze_email_content
 from risk_engine import calculate_risk
 from report_generator import generate_forensic_pdf
-from sandbox_analyzer import detonate_attachment
 from siem_integration import forward_to_siem
 from blockchain_evidence import store_blockchain_evidence
 
@@ -121,8 +120,7 @@ def process_email_file(filepath, filename):
         ip_intel[ip] = check_ip_reputation(ip)
         time.sleep(0.3)
     
-    risk_data = calculate_risk(parsed_data=parsed_data, ai_data=ai_prediction, urls=url_data)
-    sandbox_data = [detonate_attachment(filepath, "payload.bin")]
+    risk_data = calculate_risk(parsed_data=parsed_data, ai_data=ai_prediction, urls=url_data) 
     
     # Enhanced Report Features
     mitre_mapping = map_to_mitre(risk_data.get('matched_rules', []))
@@ -138,8 +136,8 @@ def process_email_file(filepath, filename):
     full_dataset = {
         "parsed": parsed_data, "analysis": analysis_data, "urls": url_data,
         "ips": public_ips, "geo": geo_results, "ip_intel": ip_intel,
-        "ai_data": ai_prediction, "risk_data": risk_data, 
-        "sandbox_data": sandbox_data, "forensic_metadata": forensic_metadata
+        "ai_data": ai_prediction, "risk_data": risk_data,
+        "forensic_metadata": forensic_metadata
     }
     
     # Immutable Storage & SIEM Forwarding
@@ -147,12 +145,11 @@ def process_email_file(filepath, filename):
     full_dataset['forensic_metadata']['blockchain_sha256_hash'] = evidence_hash
     forward_to_siem(risk_data, filename, risk_data.get('severity', 'UNKNOWN'))
     
-    return render_template('index.html', filename=filename, parsed=parsed_data, 
-                           analysis=analysis_data, urls=url_data, ips=public_ips, 
-                           geo=geo_results, ip_intel=ip_intel, ai_data=ai_prediction, 
-                           risk_data=risk_data, sandbox_data=sandbox_data, 
-                           evidence_hash=evidence_hash, raw_json=json.dumps(full_dataset), 
-                           monitoring=MONITORING_ACTIVE)
+    return render_template('index.html', filename=filename, parsed=parsed_data,
+                       analysis=analysis_data, urls=url_data, ips=public_ips,
+                       geo=geo_results, ip_intel=ip_intel, ai_data=ai_prediction,
+                       risk_data=risk_data, evidence_hash=evidence_hash, 
+                       raw_json=json.dumps(full_dataset), monitoring=MONITORING_ACTIVE)
 
 
 # --- MAIN WEB ROUTES ---

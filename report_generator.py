@@ -47,7 +47,6 @@ def generate_forensic_pdf(data, output_path):
     risk = data.get('risk_data', {})
     ai = data.get('ai_data', {})
     urls = data.get('urls', [])
-    sandbox = data.get('sandbox_data', [])
 
     # =========================================================================
     # HEADER & BRANDING
@@ -122,26 +121,7 @@ def generate_forensic_pdf(data, output_path):
     # =========================================================================
     # MODULE 6: THREAT INTELLIGENCE
     # =========================================================================
-    elements.append(Paragraph("/// MODULE 6: THREAT INTELLIGENCE (SANDBOXING)", heading_style))
-    if sandbox:
-        m6_data = [[Paragraph("FILENAME", bold_mono), Paragraph("VERDICT", bold_mono), Paragraph("THREAT INTEL STATUS", bold_mono)]]
-        for s in sandbox:
-            rep = s.get('sandbox_report', {})
-            m6_data.append([
-                Paragraph(s.get('filename', 'Unknown'), normal_mono),
-                Paragraph(rep.get('verdict', 'N/A'), normal_mono),
-                Paragraph(rep.get('status', 'N/A'), normal_mono)
-            ])
-        t_m6 = Table(m6_data, colWidths=[180, 100, 260])
-        t_m6.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), color_border),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('GRID', (0, 0), (-1, -1), 0.5, color_border),
-            ('PADDING', (0, 0), (-1, -1), 6),
-        ]))
-        elements.append(t_m6)
-    else:
-        elements.append(Paragraph("No executable attachments found for Threat Intel Sandbox detonation.", normal_mono))
+
 
     # =========================================================================
     # MODULE 7 & 8: AI/ML DETECTION & RISK SCORING (FIXED SIZING)

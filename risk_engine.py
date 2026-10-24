@@ -1,6 +1,6 @@
-def calculate_risk(parsed_data, urls=None, sandbox_data=None, ai_data=None):
+def calculate_risk(parsed_data, urls=None, ai_data=None):
     """
-    Evaluates multi-vector telemetry (headers, URLs, sandboxing, and AI confidence)
+    Evaluates multi-vector telemetry (headers, URLs and AI confidence)
     to compute a dynamic risk score, severity rating, and matched heuristic rules.
     """
     score = 0
@@ -8,7 +8,6 @@ def calculate_risk(parsed_data, urls=None, sandbox_data=None, ai_data=None):
 
     # Ensure parameters are valid lists/dicts
     urls = urls or []
-    sandbox_data = sandbox_data or []
     ai_data = ai_data or {}
     parsed_data = parsed_data or {}
 
@@ -34,14 +33,6 @@ def calculate_risk(parsed_data, urls=None, sandbox_data=None, ai_data=None):
         if 'MALICIOUS' in status or 'PHISHING' in status or 'SUSPICIOUS' in status:
             score += 25
             matched_rules.append(f"Malicious IOC Domain detected: {u.get('domain', 'Unknown')} (+25)")
-
-    # 3. Sandbox Detonation Check
-    for item in sandbox_data:
-        report = item.get('sandbox_report', {})
-        verdict = report.get('verdict', '').upper()
-        if 'MALICIOUS' in verdict or 'THREAT' in verdict or 'SUSPICIOUS' in verdict:
-            score += 40
-            matched_rules.append(f"Sandbox isolated threat in attachment: {item.get('filename', 'payload')} (+40)")
 
     # 4. Deep Neural Network (DNN) AI Confidence Integration
     print("--- DEBUG AI DATA ---", ai_data)

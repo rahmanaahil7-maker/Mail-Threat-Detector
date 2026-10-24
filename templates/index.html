@@ -105,7 +105,7 @@
             </h1>
 
             <p class="text-slate-300 text-sm md:text-base max-w-xl leading-relaxed mb-10 drop-shadow">
-                Deploy advanced data forensic extraction, deep neural network scanning, and isolated sandbox detonation for complete network security.
+                Deploy advanced data forensic extraction, deep neural network scanning and for complete network security.
             </p>
 
             <div class="flex items-center justify-center gap-4 mb-12">
@@ -247,30 +247,7 @@
                     </div>
                 </div>
 
-                <!-- Sandbox Detonation Telemetry -->
-                <div class="glass-panel rounded-2xl overflow-hidden flex flex-col shadow-2xl border-white/10">
-                    <div class="px-6 py-4 border-b border-white/10 bg-black/10 flex items-center justify-between">
-                        <h3 class="text-xs font-bold text-white uppercase tracking-wider font-mono">Sandbox Detonation</h3>
-                        <span class="bg-black/15 text-red-400 text-xs py-0.5 px-3 rounded-full border border-white/5 font-mono">ISOLATED</span>
-                    </div>
-                    <div class="p-5 overflow-y-auto max-h-[350px] space-y-4">
-                        {% if sandbox_data %}
-                            {% for item in sandbox_data %}
-                                <div class="bg-black/20 border border-white/5 rounded-xl p-4">
-                                    <div class="flex justify-between items-start mb-2.5">
-                                        <span class="text-white font-medium text-xs font-mono break-all pr-2">{{ item.filename }}</span>
-                                        <span class="text-red-400 text-[10px] font-bold uppercase px-2.5 py-0.5 bg-red-950/40 rounded-full border border-red-900/40 whitespace-nowrap font-mono">{{ item.sandbox_report.verdict }}</span>
-                                    </div>
-                                    <p class="text-[10px] text-slate-400 font-mono uppercase bg-black/25 p-2.5 rounded-lg border border-white/5">STATUS: {{ item.sandbox_report.status }}</p>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="h-32 flex items-center justify-center">
-                                <p class="text-xs text-slate-500 font-mono uppercase">No attachments detonated.</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+                
 
             </div>
             {% endif %}
